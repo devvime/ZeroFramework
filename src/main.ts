@@ -34,7 +34,5 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
 const PORT = 3000;
 
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  console.log(`- Teste GET: http://localhost:${PORT}/users/123?active=true`);
-  console.log(`- Teste POST: http://localhost:${PORT}/users (Requer header Authorization)`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
