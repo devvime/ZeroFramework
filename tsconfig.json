@@ -9,6 +9,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false,
     "skipLibCheck": true,
+    "types": ["node"],
     "paths": {
       "@zero/*": ["./src/lib/*"],
       "@app/*": ["./src/application/*" ]
