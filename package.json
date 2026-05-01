@@ -1,0 +1,16 @@
+{
+  "name": "meu-mini-nestjs",
+  "version": "1.0.0",
+  "description": "Microframework TS",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "ts-node-dev src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.39",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.0.0"
+  }
+}
