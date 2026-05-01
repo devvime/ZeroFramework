@@ -9,11 +9,12 @@ export function Controller(basePath: string) {
 export function UseMiddleware(...middlewares: Middleware[]) {
   return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
     if (propertyKey) {
-      // Aplicado em um método
+      // Applied in a method
       if (!target.__middlewares) target.__middlewares = {};
       target.__middlewares[propertyKey] = middlewares;
     } else {
-      // Pode ser expandido para aplicar no controller inteiro
+      // Applied in the entire class (Controller)
+      target.prototype.__controllerMiddlewares = middlewares;
     }
   };
 }
@@ -22,7 +23,7 @@ function RouteFactory(method: string, path: string) {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     if (!target.__routes) target.__routes = [];
     
-    // Pega middlewares definidos no método, se houver
+    // Retrieves middlewares defined only in the method
     const middlewares = target.__middlewares?.[propertyKey] || [];
     
     target.__routes.push({

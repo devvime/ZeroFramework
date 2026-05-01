@@ -2,6 +2,7 @@ import { RouteDefinition, Request, Response, Context } from './types';
 import { parseMultipartFormData } from './helper';
 
 export class AppRouter {
+
   private routes: Array<{
     method: string;
     pathRegex: RegExp;
@@ -15,11 +16,11 @@ export class AppRouter {
       const instance = new ControllerClass();
       const basePath = ControllerClass.prototype.__basePath || '';
       const routes: RouteDefinition[] = ControllerClass.prototype.__routes || [];
+      const controllerMiddlewares = ControllerClass.prototype.__controllerMiddlewares || [];
 
       routes.forEach((route) => {
         const fullPath = `${basePath}${route.path}`.replace(/\/+/g, '/');
         
-        // Conversão de /users/:id para Regex
         const paramKeys: string[] = [];
         const regexString = fullPath.replace(/:([^\/]+)/g, (_, key) => {
           paramKeys.push(key);
@@ -28,11 +29,13 @@ export class AppRouter {
         
         const pathRegex = new RegExp(`^${regexString}$`);
 
+        const combinedMiddlewares = [...controllerMiddlewares, ...route.middlewares];
+
         this.routes.push({
           method: route.method,
           pathRegex,
           paramKeys,
-          middlewares: route.middlewares,
+          middlewares: combinedMiddlewares,
           handler: instance[route.handlerName].bind(instance)
         });
       });
@@ -59,7 +62,6 @@ export class AppRouter {
     const pathname = parsedUrl.pathname;
     const method = req.method;
 
-    // Procura a rota via Regex
     const matchedRoute = this.routes.find(r => r.method === method && r.pathRegex.test(pathname));
 
     if (!matchedRoute) {
@@ -67,7 +69,6 @@ export class AppRouter {
       return res.end(JSON.stringify({ error: 'Not Found' }));
     }
 
-    // Extrai Path Params
     const match = pathname.match(matchedRoute.pathRegex);
     const params: Record<string, string> = {};
     if (match) {
@@ -76,7 +77,6 @@ export class AppRouter {
       });
     }
 
-    // Extrai Query Params
     const query: Record<string, string> = {};
     parsedUrl.searchParams.forEach((val, key) => { query[key] = val; });
 
@@ -87,11 +87,9 @@ export class AppRouter {
       body: {}
     };
 
-    // Lê o Body se necessário
     if (['POST', 'PUT', 'PATCH'].includes(method!)) {
       const chunks: Buffer[] = [];
       
-      // Armazena os dados crus em binário (não use toString aqui!)
       req.on('data', chunk => chunks.push(chunk));
       
       req.on('end', () => {
@@ -100,26 +98,22 @@ export class AppRouter {
 
         try {
           if (contentType.includes('application/json')) {
-            // Parser de JSON
             const textBody = rawBuffer.toString('utf-8');
             ctx.body = textBody ? JSON.parse(textBody) : {};
 
           } else if (contentType.includes('application/x-www-form-urlencoded')) {
-            // Parser de Form nativo simples (name=John&age=30)
             const textBody = rawBuffer.toString('utf-8');
             const parsedForm = new URLSearchParams(textBody);
             ctx.body = Object.fromEntries(parsedForm.entries());
 
           } else if (contentType.includes('multipart/form-data')) {
-            // Parser de arquivos e dados complexos
             const boundaryMatch = contentType.match(/boundary=(.+)$/);
             if (!boundaryMatch) throw new Error('Boundary não encontrado no header');
             
             const { fields, files } = parseMultipartFormData(rawBuffer, boundaryMatch[1]);
             ctx.body = fields;
-            ctx.files = files; // Injeta os arquivos no contexto
+            ctx.files = files;
           } else {
-            // Fallback (texto puro)
             ctx.body = rawBuffer.toString('utf-8');
           }
 
@@ -128,13 +122,11 @@ export class AppRouter {
           return res.end(JSON.stringify({ error: 'Erro ao processar body', details: e.message }));
         }
         
-        // Executa chain de middlewares e chama o handler final
         this.executeMiddlewares(req, res, matchedRoute.middlewares, 0, () => {
           matchedRoute.handler(req, res, ctx);
         });
       });
     } else {
-      // GET, DELETE, OPTIONS, etc...
       this.executeMiddlewares(req, res, matchedRoute.middlewares, 0, () => {
         matchedRoute.handler(req, res, ctx);
       });
